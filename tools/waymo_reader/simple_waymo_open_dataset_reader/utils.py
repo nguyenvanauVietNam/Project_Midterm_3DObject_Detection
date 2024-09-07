@@ -241,5 +241,8 @@ def get(object_list, name):
     """ Search for an object by name in an object list. """
 
     object_list = [obj for obj in object_list if obj.name == name]
-    return object_list[0]
+    if object_list:
+        return object_list[0]
+    else:
+        raise ValueError(f"No find data: {name}")
 
