@@ -171,8 +171,6 @@ def detect_objects(input_bev_maps, model, configs):
             #######
             ####### ID_S3_EX1-5 END #######     
 
-            
-
     ####### ID_S3_EX2 START #######     
     #######
     # Extract 3d bounding boxes from model response
@@ -191,4 +189,3 @@ def detect_objects(input_bev_maps, model, configs):
     ####### ID_S3_EX2 START #######   
     
     return objects    
-

@@ -35,18 +35,13 @@ class Track:
         # - initialize track state and track score with appropriate values
         ############
 
-        self.x = np.matrix([[49.53980697],
-                        [ 3.41006279],
-                        [ 0.91790581],
-                        [ 0.        ],
-                        [ 0.        ],
-                        [ 0.        ]])
-        self.P = np.matrix([[9.0e-02, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 9.0e-02, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 6.4e-03, 0.0e+00, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 0.0e+00, 2.5e+03, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 2.5e+03, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 2.5e+01]])
+        # Initialize state vector x
+        x_meas = np.array([meas.x, meas.y, meas.z, meas.vx, meas.vy, meas.vz])
+        self.x = np.matrix(x_meas).T
+        
+        # Initialize covariance matrix P
+        self.P = np.matrix(np.diag([params.P_x, params.P_y, params.P_z, params.P_vx, params.P_vy, params.P_vz]))
+        
         self.state = 'confirmed'
         self.score = 0
         
@@ -59,7 +54,7 @@ class Track:
         self.width = meas.width
         self.length = meas.length
         self.height = meas.height
-        self.yaw =  np.arccos(M_rot[0,0]*np.cos(meas.yaw) + M_rot[0,1]*np.sin(meas.yaw)) # transform rotation from sensor to vehicle coordinates
+        self.yaw = np.arccos(M_rot[0,0]*np.cos(meas.yaw) + M_rot[0,1]*np.sin(meas.yaw)) # transform rotation from sensor to vehicle coordinates
         self.t = meas.t
 
     def set_x(self, x):
@@ -103,13 +98,17 @@ class Trackmanagement:
         # decrease score for unassigned tracks
         for i in unassigned_tracks:
             track = self.track_list[i]
+            track.score -= params.decrease_score  # Decrease the score for unassigned tracks
+            
             # check visibility    
             if meas_list: # if not empty
                 if meas_list[0].sensor.in_fov(track.x):
                     # your code goes here
                     pass 
 
-        # delete old tracks   
+        # delete old tracks
+        self.track_list = [track for track in self.track_list if track.score > params.delete_score_threshold and np.all(np.diag(track.P) < params.P_threshold)]
+        self.N = len(self.track_list)  # Update the count of active tracks
 
         ############
         # END student code
@@ -140,7 +139,13 @@ class Trackmanagement:
         # - set track state to 'tentative' or 'confirmed'
         ############
 
-        pass
+        track.score += params.increase_score  # Increase the score for updated tracks
+        
+        # Set track state to 'tentative' if it's new or to 'confirmed' if it's been updated multiple times
+        if track.state == 'confirmed':
+            track.state = 'confirmed'
+        else:
+            track.state = 'tentative'
         
         ############
         # END student code

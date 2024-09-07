@@ -34,7 +34,7 @@ import misc.objdet_tools as tools
 # compute various performance measures to assess object detection
 def measure_detection_performance(detections, labels, labels_valid, min_iou=0.5):
     
-     # find best detection for each valid label 
+    # find best detection for each valid label 
     true_positives = 0 # no. of correctly detected objects
     center_devs = []
     ious = []
@@ -49,26 +49,44 @@ def measure_detection_performance(detections, labels, labels_valid, min_iou=0.5)
             print("student task ID_S4_EX1 ")
 
             ## step 1 : extract the four corners of the current label bounding-box
-            
-            ## step 2 : loop over all detected objects
+            label_polygon = Polygon([
+                (label[1], label[2]),
+                (label[1] + label[4], label[2]),
+                (label[1] + label[4], label[2] + label[5]),
+                (label[1], label[2] + label[5])
+            ])
 
-                ## step 3 : extract the four corners of the current detection
-                
-                ## step 4 : computer the center distance between label and detection bounding-box in x, y, and z
-                
-                ## step 5 : compute the intersection over union (IOU) between label and detection bounding-box
-                
-                ## step 6 : if IOU exceeds min_iou threshold, store [iou,dist_x, dist_y, dist_z] in matches_lab_det and increase the TP count
+            ## step 2 : loop over all detected objects
+            for detection in detections:
+                # Extract the four corners of the detection bounding-box
+                det_polygon = Polygon([
+                    (detection[1], detection[2]),
+                    (detection[1] + detection[4], detection[2]),
+                    (detection[1] + detection[4], detection[2] + detection[5]),
+                    (detection[1], detection[2] + detection[5])
+                ])
+
+                ## step 3 : compute the center distance between label and detection bounding-box in x, y, and z
+                center_dist_x = abs((label[1] + label[4]/2) - (detection[1] + detection[4]/2))
+                center_dist_y = abs((label[2] + label[5]/2) - (detection[2] + detection[5]/2))
+                center_dist_z = 0.0  # Assuming 2D for simplicity
+
+                ## step 4 : compute the intersection over union (IOU) between label and detection bounding-box
+                iou = label_polygon.intersection(det_polygon).area / label_polygon.union(det_polygon).area
+
+                ## step 5 : if IOU exceeds min_iou threshold, store [iou, dist_x, dist_y, dist_z] in matches_lab_det and increase the TP count
+                if iou > min_iou:
+                    matches_lab_det.append([iou, center_dist_x, center_dist_y, center_dist_z])
+                    true_positives += 1
                 
             #######
             ####### ID_S4_EX1 END #######     
             
         # find best match and compute metrics
         if matches_lab_det:
-            best_match = max(matches_lab_det,key=itemgetter(1)) # retrieve entry with max iou in case of multiple candidates   
+            best_match = max(matches_lab_det, key=itemgetter(0)) # retrieve entry with max iou in case of multiple candidates   
             ious.append(best_match[0])
             center_devs.append(best_match[1:])
-
 
     ####### ID_S4_EX2 START #######     
     #######
@@ -77,13 +95,13 @@ def measure_detection_performance(detections, labels, labels_valid, min_iou=0.5)
     # compute positives and negatives for precision/recall
     
     ## step 1 : compute the total number of positives present in the scene
-    all_positives = 0
-
+    all_positives = sum(labels_valid)
+    
     ## step 2 : compute the number of false negatives
-    false_negatives = 0
+    false_negatives = all_positives - true_positives
 
     ## step 3 : compute the number of false positives
-    false_positives = 0
+    false_positives = len(detections) - true_positives
     
     #######
     ####### ID_S4_EX2 END #######     
@@ -111,12 +129,16 @@ def compute_performance_stats(det_performance_all):
     print('student task ID_S4_EX3')
 
     ## step 1 : extract the total number of positives, true positives, false negatives and false positives
+    all_positives = sum([item[0][0] for item in pos_negs])
+    true_positives = sum([item[1] for item in pos_negs])
+    false_negatives = sum([item[2] for item in pos_negs])
+    false_positives = sum([item[3] for item in pos_negs])
     
     ## step 2 : compute precision
-    precision = 0.0
+    precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0.0
 
     ## step 3 : compute recall 
-    recall = 0.0
+    recall = true_positives / (all_positives) if all_positives > 0 else 0.0
 
     #######    
     ####### ID_S4_EX3 END #######     
@@ -136,26 +158,25 @@ def compute_performance_stats(det_performance_all):
     
 
     # compute statistics
-    stdev__ious = np.std(ious_all)
-    mean__ious = np.mean(ious_all)
+    stdev_ious = np.std(ious_all)
+    mean_ious = np.mean(ious_all)
 
-    stdev__devx = np.std(devs_x_all)
-    mean__devx = np.mean(devs_x_all)
+    stdev_devx = np.std(devs_x_all)
+    mean_devx = np.mean(devs_x_all)
 
-    stdev__devy = np.std(devs_y_all)
-    mean__devy = np.mean(devs_y_all)
+    stdev_devy = np.std(devs_y_all)
+    mean_devy = np.mean(devs_y_all)
 
-    stdev__devz = np.std(devs_z_all)
-    mean__devz = np.mean(devs_z_all)
-    #std_dev_x = np.std(devs_x)
+    stdev_devz = np.std(devs_z_all)
+    mean_devz = np.mean(devs_z_all)
 
     # plot results
     data = [precision, recall, ious_all, devs_x_all, devs_y_all, devs_z_all]
     titles = ['detection precision', 'detection recall', 'intersection over union', 'position errors in X', 'position errors in Y', 'position error in Z']
     textboxes = ['', '', '',
                  '\n'.join((r'$\mathrm{mean}=%.4f$' % (np.mean(devs_x_all), ), r'$\mathrm{sigma}=%.4f$' % (np.std(devs_x_all), ), r'$\mathrm{n}=%.0f$' % (len(devs_x_all), ))),
-                 '\n'.join((r'$\mathrm{mean}=%.4f$' % (np.mean(devs_y_all), ), r'$\mathrm{sigma}=%.4f$' % (np.std(devs_y_all), ), r'$\mathrm{n}=%.0f$' % (len(devs_x_all), ))),
-                 '\n'.join((r'$\mathrm{mean}=%.4f$' % (np.mean(devs_z_all), ), r'$\mathrm{sigma}=%.4f$' % (np.std(devs_z_all), ), r'$\mathrm{n}=%.0f$' % (len(devs_x_all), )))]
+                 '\n'.join((r'$\mathrm{mean}=%.4f$' % (np.mean(devs_y_all), ), r'$\mathrm{sigma}=%.4f$' % (np.std(devs_y_all), ), r'$\mathrm{n}=%.0f$' % (len(devs_y_all), ))),
+                 '\n'.join((r'$\mathrm{mean}=%.4f$' % (np.mean(devs_z_all), ), r'$\mathrm{sigma}=%.4f$' % (np.std(devs_z_all), ), r'$\mathrm{n}=%.0f$' % (len(devs_z_all), )))]
 
     f, a = plt.subplots(2, 3)
     a = a.ravel()
@@ -169,4 +190,3 @@ def compute_performance_stats(det_performance_all):
                     verticalalignment='top', bbox=props)
     plt.tight_layout()
     plt.show()
-
