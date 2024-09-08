@@ -47,47 +47,49 @@ import misc.params as params
 ## Set parameters and perform initializations
 
 ## Select Waymo Open Dataset file and frame numbers
-data_filename = 'training_segment-1005081002024129653_5313_150_5333_150_with_camera_labels.tfrecord'
+data_filename = 'training_segment-1005081002024129653_5313_150_5333_150_with_camera_labels.tfrecord'# Sequence 1
+# data_filename = 'training_segment-10072231702153043603_5725_000_5745_000_with_camera_labels.tfrecord' # Sequence 2
+# data_filename = 'training_segment-10963653239323173269_1924_000_1944_000_with_camera_labels.tfrecord' # Sequence 3
 show_only_frames = [0, 200]  # Show only frames in interval for debugging
 
 ## Prepare Waymo Open Dataset file for loading
 data_fullpath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'dataset', data_filename)
-model = "darknet"
-sequence = "3"
-results_fullpath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'results/' + model + '/results_sequence_' + sequence + '_' + model)
+model_name = "darknet"
+sequence_number = "3"
+results_fullpath = os.path.join(os.path.dirname(os.path.realpath(__file__)), f'results/{model_name}/results_sequence_{sequence_number}_{model_name}')
 datafile = WaymoDataFileReader(data_fullpath)
 datafile_iter = iter(datafile)  # Initialize dataset iterator
 
 ## Initialize object detection
-configs_det = det.load_configs(model_name='darknet')  # Options are 'darknet', 'fpn_resnet'
-model_det = det.create_model(configs_det)
+det_config = det.load_configs(model_name=model_name)  # Options are 'darknet', 'fpn_resnet'
+det_model = det.create_model(det_config)
 
-configs_det.use_labels_as_objects = False  # True = use groundtruth labels as objects, False = use model-based detection
+det_config.use_labels_as_objects = False  # True = use groundtruth labels as objects, False = use model-based detection
 
 ## Uncomment this setting to restrict the y-range in the final project
-# configs_det.lim_y = [-25, 25] 
+# det_config.lim_y = [-25, 25] 
 
 ## Initialize tracking
-KF = Filter()  # Set up Kalman filter 
-association = Association()  # Init data association
-manager = Trackmanagement()  # Init track manager
-lidar = None  # Init lidar sensor object
-camera = None  # Init camera sensor object
+kalman_filter = Filter()  # Set up Kalman filter 
+data_association = Association()  # Init data association
+track_manager = Trackmanagement()  # Init track manager
+lidar_sensor = None  # Init lidar sensor object
+camera_sensor = None  # Init camera sensor object
 np.random.seed(10)  # Make random values predictable
 
 ## Selective execution and visualization
-exec_detection = ['pcl_from_rangeimage', 'bev_from_pcl', 'detect_objects', 'validate_object_labels', 'measure_detection_performance']  # Options are 'bev_from_pcl', 'detect_objects', 'validate_object_labels', 'measure_detection_performance'; options not in the list will be loaded from file
-exec_tracking = ['perform_tracking']  # Options are 'perform_tracking'
-exec_visualization = ['show_range_image', 'show_bev', 'show_pcl', 'show_labels_in_image', 'show_objects_and_labels_in_bev', 'show_objects_in_bev_labels_in_camera', 'show_tracks', 'show_detection_performance', 'make_tracking_movie']  # Options are 'show_range_image', 'show_bev', 'show_pcl', 'show_labels_in_image', 'show_objects_and_labels_in_bev', 'show_objects_in_bev_labels_in_camera', 'show_tracks', 'show_detection_performance', 'make_tracking_movie'
-exec_list = make_exec_list(exec_detection, exec_tracking, exec_visualization)
-vis_pause_time = 0  # Set pause time between frames in ms (0 = stop between frames until key is pressed)
+detection_tasks = ['pcl_from_rangeimage', 'bev_from_pcl', 'detect_objects', 'validate_object_labels', 'measure_detection_performance']
+tracking_tasks = ['perform_tracking']
+visualization_tasks = ['show_range_image', 'show_bev', 'show_pcl', 'show_labels_in_image', 'show_objects_and_labels_in_bev', 'show_objects_in_bev_labels_in_camera', 'show_tracks', 'show_detection_performance', 'make_tracking_movie']
+exec_list = make_exec_list(detection_tasks, tracking_tasks, visualization_tasks)
+visualization_pause_time = 0  # Set pause time between frames in ms (0 = stop between frames until key is pressed)
 
 ##################
 ## Perform detection & tracking over all selected frames
 
-cnt_frame = 0
+frame_counter = 0
 all_labels = []
-det_performance_all = []
+detection_performance_all = []
 if 'show_tracks' in exec_list:
     fig, (ax2, ax) = plt.subplots(1, 2)  # Init track plot
 
@@ -95,15 +97,15 @@ while True:
     try:
         ## Get next frame from Waymo dataset
         frame = next(datafile_iter)
-        if cnt_frame < show_only_frames[0]:
-            cnt_frame += 1
+        if frame_counter < show_only_frames[0]:
+            frame_counter += 1
             continue
-        elif cnt_frame > show_only_frames[1]:
+        elif frame_counter > show_only_frames[1]:
             print('Reached end of selected frames')
             break
         
         print('------------------------------')
-        print('Processing frame #' + str(cnt_frame))
+        print(f'Processing frame #{frame_counter}')
 
         #################################
         ## Perform 3D object detection
@@ -114,135 +116,135 @@ while True:
         lidar_calibration = waymo_utils.get(frame.context.laser_calibrations, lidar_name)
         camera_calibration = waymo_utils.get(frame.context.camera_calibrations, camera_name)
         if 'load_image' in exec_list:
-            image = tools.extract_front_camera_image(frame) 
+            front_image = tools.extract_front_camera_image(frame) 
 
         ## Compute LiDAR point-cloud from range image
         if 'pcl_from_rangeimage' in exec_list:
             print('Computing point-cloud from LiDAR range image')
-            lidar_pcl = tools.pcl_from_range_image(frame, lidar_name)
+            lidar_point_cloud = tools.pcl_from_range_image(frame, lidar_name)
         else:
             print('Loading LiDAR point-cloud from result file')
-            lidar_pcl = load_object_from_file(results_fullpath, data_filename, 'lidar_pcl', cnt_frame)
+            lidar_point_cloud = load_object_from_file(results_fullpath, data_filename, 'lidar_pcl', frame_counter)
             
         ## Compute LiDAR birds-eye view (BEV)
         if 'bev_from_pcl' in exec_list:
             print('Computing birds-eye view from LiDAR point-cloud')
-            lidar_bev = pcl.bev_from_pcl(lidar_pcl, configs_det)
+            lidar_bev = pcl.bev_from_pcl(lidar_point_cloud, det_config)
         else:
             print('Loading birds-eye view from result file')
-            lidar_bev = load_object_from_file(results_fullpath, data_filename, 'lidar_bev', cnt_frame)
+            lidar_bev = load_object_from_file(results_fullpath, data_filename, 'lidar_bev', frame_counter)
 
         ## 3D object detection
-        if configs_det.use_labels_as_objects:
+        if det_config.use_labels_as_objects:
             print('Using groundtruth labels as objects')
-            detections = tools.convert_labels_into_objects(frame.laser_labels, configs_det)
+            detected_objects = tools.convert_labels_into_objects(frame.laser_labels, det_config)
         else:
             if 'detect_objects' in exec_list:
                 print('Detecting objects in LiDAR point-cloud')   
-                detections = det.detect_objects(lidar_bev, model_det, configs_det)
+                detected_objects = det.detect_objects(lidar_bev, det_model, det_config)
             else:
                 print('Loading detected objects from result file')
-                detections = load_object_from_file(results_fullpath, data_filename, 'detections_' + configs_det.arch + '_' + str(configs_det.conf_thresh), cnt_frame)
+                detected_objects = load_object_from_file(results_fullpath, data_filename, f'detections_{det_config.arch}_{det_config.conf_thresh}', frame_counter)
 
         ## Validate object labels
         if 'validate_object_labels' in exec_list:
             print("Validating object labels")
-            valid_label_flags = tools.validate_object_labels(frame.laser_labels, lidar_pcl, configs_det, 0 if configs_det.use_labels_as_objects else 10)
+            valid_label_flags = tools.validate_object_labels(frame.laser_labels, lidar_point_cloud, det_config, 0 if det_config.use_labels_as_objects else 10)
         else:
             print('Loading object labels and validation from result file')
-            valid_label_flags = load_object_from_file(results_fullpath, data_filename, 'valid_labels', cnt_frame)            
+            valid_label_flags = load_object_from_file(results_fullpath, data_filename, 'valid_labels', frame_counter)            
 
         ## Performance evaluation for object detection
         if 'measure_detection_performance' in exec_list:
             print('Measuring detection performance')
-            det_performance = eval.measure_detection_performance(detections, frame.laser_labels, valid_label_flags, configs_det.min_iou)     
+            detection_performance = eval.measure_detection_performance(detected_objects, frame.laser_labels, valid_label_flags, det_config.min_iou)     
         else:
             print('Loading detection performance measures from file')
-            det_performance = load_object_from_file(results_fullpath, data_filename, 'det_performance_' + configs_det.arch + '_' + str(configs_det.conf_thresh), cnt_frame)   
+            detection_performance = load_object_from_file(results_fullpath, data_filename, f'det_performance_{det_config.arch}_{det_config.conf_thresh}', frame_counter)   
 
-        det_performance_all.append(det_performance)  # Store all evaluation results in a list for performance assessment at the end
+        detection_performance_all.append(detection_performance)  # Store all evaluation results in a list for performance assessment at the end
         
         ## Visualization for object detection
         if 'show_range_image' in exec_list:
-            img_range = pcl.show_range_image(frame, lidar_name)
-            img_range = img_range.astype(np.uint8)
-            cv2.imshow('Range Image', img_range)
-            cv2.waitKey(vis_pause_time)
+            range_image = pcl.show_range_image(frame, lidar_name)
+            range_image = range_image.astype(np.uint8)
+            cv2.imshow('Range Image', range_image)
+            cv2.waitKey(visualization_pause_time)
 
         if 'show_pcl' in exec_list:
-            pcl.show_pcl(lidar_pcl)
+            pcl.show_pcl(lidar_point_cloud)
 
         if 'show_bev' in exec_list:
-            tools.show_bev(lidar_bev, configs_det)  
-            cv2.waitKey(vis_pause_time)          
+            tools.show_bev(lidar_bev, det_config)  
+            cv2.waitKey(visualization_pause_time)          
 
         if 'show_labels_in_image' in exec_list:
-            img_labels = tools.project_labels_into_camera(camera_calibration, image, frame.laser_labels, valid_label_flags, 0.5)
-            cv2.imshow('Labels in Image', img_labels)
-            cv2.waitKey(vis_pause_time)
+            labeled_image = tools.project_labels_into_camera(camera_calibration, front_image, frame.laser_labels, valid_label_flags, 0.5)
+            cv2.imshow('Labels in Image', labeled_image)
+            cv2.waitKey(visualization_pause_time)
 
         if 'show_objects_and_labels_in_bev' in exec_list:
-            tools.show_objects_labels_in_bev(detections, frame.laser_labels, lidar_bev, configs_det)
-            cv2.waitKey(vis_pause_time)         
+            tools.show_objects_labels_in_bev(detected_objects, frame.laser_labels, lidar_bev, det_config)
+            cv2.waitKey(visualization_pause_time)         
 
         if 'show_objects_in_bev_labels_in_camera' in exec_list:
-            tools.show_objects_in_bev_labels_in_camera(detections, lidar_bev, image, frame.laser_labels, valid_label_flags, camera_calibration, configs_det)
-            cv2.waitKey(vis_pause_time)               
+            tools.show_objects_in_bev_labels_in_camera(detected_objects, lidar_bev, front_image, frame.laser_labels, valid_label_flags, camera_calibration, det_config)
+            cv2.waitKey(visualization_pause_time)               
 
         #################################
         ## Perform tracking
         if 'perform_tracking' in exec_list:
             # Set up sensor objects
-            if lidar is None:
-                lidar = Sensor('lidar', lidar_calibration)
-            if camera is None:
-                camera = Sensor('camera', camera_calibration)
+            if lidar_sensor is None:
+                lidar_sensor = Sensor('lidar', lidar_calibration)
+            if camera_sensor is None:
+                camera_sensor = Sensor('camera', camera_calibration)
             
             # Preprocess LiDAR detections
-            meas_list_lidar = []
-            for detection in detections:
-                meas_list_lidar = lidar.generate_measurement(cnt_frame, detection[1:], meas_list_lidar)
+            lidar_measurements = []
+            for detection in detected_objects:
+                lidar_measurements = lidar_sensor.generate_measurement(frame_counter, detection[1:], lidar_measurements)
                 
             # Preprocess camera detections
-            meas_list_cam = []
+            camera_measurements = []
             for label in frame.camera_labels[0].labels:
                 if label.type == label_pb2.Label.Type.TYPE_VEHICLE:
                     box = label.box
                     # Use camera labels as measurements and add some random noise
-                    z = [box.center_x, box.center_y, box.width, box.length]
-                    z[0] += np.random.normal(0, params.sigma_cam_i)
-                    z[1] += np.random.normal(0, params.sigma_cam_j)
-                    meas_list_cam = camera.generate_measurement(cnt_frame, z, meas_list_cam)
+                    measurement = [box.center_x, box.center_y, box.width, box.length]
+                    measurement[0] += np.random.normal(0, params.sigma_cam_i)
+                    measurement[1] += np.random.normal(0, params.sigma_cam_j)
+                    camera_measurements = camera_sensor.generate_measurement(frame_counter, measurement, camera_measurements)
             
             # Kalman prediction
-            for track in manager.track_list:
-                print('Predict track', track.id)
-                KF.predict(track)
-                track.set_t((cnt_frame - 1) * 0.1)  # Save next timestamp
+            for track in track_manager.track_list:
+                print(f'Predicting track {track.id}')
+                kalman_filter.predict(track)
+                track.set_t((frame_counter - 1) * 0.1)  # Save next timestamp
                 
             # Associate all LiDAR measurements to all tracks
-            association.associate_and_update(manager, meas_list_lidar, KF)
+            data_association.associate_and_update(track_manager, lidar_measurements, kalman_filter)
             
             # Associate all camera measurements to all tracks
-            association.associate_and_update(manager, meas_list_cam, KF)
+            data_association.associate_and_update(track_manager, camera_measurements, kalman_filter)
             
             # Save results for evaluation
-            result_dict = {track.id: track for track in manager.track_list}
-            manager.result_list.append(copy.deepcopy(result_dict))
+            result_dict = {track.id: track for track in track_manager.track_list}
+            track_manager.result_list.append(copy.deepcopy(result_dict))
             label_list = [frame.laser_labels, valid_label_flags]
             all_labels.append(label_list)
             
             # Visualization
             if 'show_tracks' in exec_list:
-                fig, ax, ax2 = plot_tracks(fig, ax, ax2, manager.track_list, meas_list_lidar, frame.laser_labels, valid_label_flags, image, camera, configs_det)
+                fig, ax, ax2 = plot_tracks(fig, ax, ax2, track_manager.track_list, lidar_measurements, frame.laser_labels, valid_label_flags, front_image, camera_sensor, det_config)
                 if 'make_tracking_movie' in exec_list:
                     # Save track plots to file
-                    fname = results_fullpath + '/tracking%03d.png' % cnt_frame
-                    print('Saving frame', fname)
-                    fig.savefig(fname)
+                    filename = f'{results_fullpath}/tracking{frame_counter:03d}.png'
+                    print(f'Saving frame {filename}')
+                    fig.savefig(filename)
 
         # Increment frame counter
-        cnt_frame += 1    
+        frame_counter += 1    
 
     except StopIteration:
         # If StopIteration is raised, break from loop
@@ -254,11 +256,11 @@ while True:
 
 ## Evaluate object detection performance
 if 'show_detection_performance' in exec_list:
-    eval.compute_performance_stats(det_performance_all, configs_det)
+    eval.compute_performance_stats(detection_performance_all, det_config)
 
 ## Plot RMSE for all tracks
 if 'show_tracks' in exec_list:
-    plot_rmse(manager, all_labels)
+    plot_rmse(track_manager, all_labels)
 
 ## Make movie from tracking results    
 if 'make_tracking_movie' in exec_list:
