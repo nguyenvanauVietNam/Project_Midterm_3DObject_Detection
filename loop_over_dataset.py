@@ -55,7 +55,7 @@ show_only_frames = [0, 200]  # Show only frames in interval for debugging
 ## Prepare Waymo Open Dataset file for loading
 data_fullpath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'dataset', data_filename)
 model_name = "darknet"
-sequence_number = "3"
+sequence_number = "1"
 results_fullpath = os.path.join(os.path.dirname(os.path.realpath(__file__)), f'results/{model_name}/results_sequence_{sequence_number}_{model_name}')
 datafile = WaymoDataFileReader(data_fullpath)
 datafile_iter = iter(datafile)  # Initialize dataset iterator
@@ -63,7 +63,6 @@ datafile_iter = iter(datafile)  # Initialize dataset iterator
 ## Initialize object detection
 det_config = det.load_configs(model_name=model_name)  # Options are 'darknet', 'fpn_resnet'
 det_model = det.create_model(det_config)
-
 det_config.use_labels_as_objects = False  # True = use groundtruth labels as objects, False = use model-based detection
 
 ## Uncomment this setting to restrict the y-range in the final project
@@ -80,7 +79,7 @@ np.random.seed(10)  # Make random values predictable
 ## Selective execution and visualization
 detection_tasks = ['pcl_from_rangeimage', 'bev_from_pcl', 'detect_objects', 'validate_object_labels', 'measure_detection_performance']
 tracking_tasks = ['perform_tracking']
-visualization_tasks = ['show_range_image', 'show_bev', 'show_pcl', 'show_labels_in_image', 'show_objects_and_labels_in_bev', 'show_objects_in_bev_labels_in_camera', 'show_tracks', 'show_detection_performance', 'make_tracking_movie']
+visualization_tasks = ['show_range_image']#, 'show_bev', 'show_pcl', 'show_labels_in_image', 'show_objects_and_labels_in_bev', 'show_objects_in_bev_labels_in_camera', 'show_tracks', 'show_detection_performance', 'make_tracking_movie']
 exec_list = make_exec_list(detection_tasks, tracking_tasks, visualization_tasks)
 visualization_pause_time = 0  # Set pause time between frames in ms (0 = stop between frames until key is pressed)
 
