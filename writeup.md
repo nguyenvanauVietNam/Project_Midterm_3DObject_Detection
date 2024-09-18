@@ -12,7 +12,58 @@ In file loop_over_dataset.py, set the attributes for code execution in the follo
 - **What your result should look like**
 ![img](img\range-image-viz.png)
 
-## 3. Challenges and Difficulties
+--------
+## Select Waymo Open Dataset file and frame numbers
+data_filename = 'training_segment-1005081002024129653_5313_150_5333_150_with_camera_labels.tfrecord' # Sequence 1
+show_only_frames = [0, 1] # show only frames in interval for debugging
+## Selective execution and visualization
+exec_data = []
+exec_detection = []
+exec_tracking = [] 
+exec_visualization = ['show_range_image'] 
+exec_list = make_exec_list(exec_detection, exec_tracking, exec_visualization)
+vis_pause_time = 0 
+- **My result**
+![img](img\Range_image_ID_S1_EX1_AuNV.png)
+--------
+- **Visualize range image channels (ID_S1_EX2)**
+- **What your result should look like**
+![img](img\point cloud visualization.png)
+--------
+## Select Waymo Open Dataset file and frame numbers
+data_filename = 'training_segment-1005081002024129653_5313_150_5333_150_with_camera_labels.tfrecord' # Sequence 2
+show_only_frames = [0, 200] # show only frames in interval for debugging
+## Selective execution and visualization
+exec_data = []
+exec_detection = []
+exec_tracking = [] 
+exec_visualization = ['show_pcl'] 
+exec_list = make_exec_list(exec_detection, exec_tracking, exec_visualization)
+vis_pause_time = 0 
+- **My result**
+![img](img\Point_cloud_image_ID_S1_EX2_AuNV.png)
+--------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ### Most Difficult Part
 The integration of camera data with LiDAR data was the most challenging due to differences in data formats and calibration requirements. Aligning these sensors accurately was crucial for effective fusion.
