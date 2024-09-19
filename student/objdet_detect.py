@@ -7,6 +7,9 @@
 # You should have received a copy of the Udacity license together with this program.
 #
 # https://www.udacity.com/course/self-driving-car-engineer-nanodegree--nd013
+# https://github.com/adamdivak/udacity_sd_lidar_fusion
+# https://github.com/mabhi16/3D_Object_detection_midterm
+#
 # ----------------------------------------------------------------------
 #
 
@@ -34,17 +37,18 @@ from tools.objdet_models.darknet.utils.evaluation_utils import post_processing_v
 def load_configs_model(model_name='darknet', configs=None):
 
     # init config file, if none has been passed
-    if configs==None:
-        configs = edict()  
+    if configs is None:
+        configs = edict()  # initialize empty dictionary
 
     # get parent directory of this file to enable relative paths
-    curr_path = os.path.dirname(os.path.realpath(__file__))
-    parent_path = configs.model_path = os.path.abspath(os.path.join(curr_path, os.pardir))    
-    
+    current_directory = os.path.dirname(os.path.realpath(__file__))
+    parent_directory = configs.model_path = os.path.abspath(os.path.join(current_directory, os.pardir))
+
     # set parameters according to model type
     if model_name == "darknet":
-        configs.model_path = os.path.join(parent_path, 'tools', 'objdet_models', 'darknet')
-        configs.pretrained_filename = os.path.join(configs.model_path, 'pretrained', 'complex_yolov4_mse_loss.pth')
+        # Set paths and parameters for Darknet model
+        configs.model_path = os.path.join(parent_directory, 'tools', 'objdet_models', 'darknet')
+        configs.pretrained_file = os.path.join(configs.model_path, 'pretrained', 'complex_yolov4_mse_loss.pth')
         configs.arch = 'darknet'
         configs.batch_size = 4
         configs.cfgfile = os.path.join(configs.model_path, 'config', 'complex_yolov4.cfg')
@@ -58,21 +62,62 @@ def load_configs_model(model_name='darknet', configs=None):
         configs.use_giou_loss = False
 
     elif model_name == 'fpn_resnet':
-        ####### ID_S3_EX1-3 START #######     
+        ####### ID_S3_EX1-3 START #######
         #######
         print("student task ID_S3_EX1-3")
-        configs.model_path = os.path.join(parent_path, 'tools', 'objdet_models', 'resnet')
-        configs.pretrained_filename = os.path.join(configs.model_path, 'pretrained', 'fpn_resnet.pth')
         configs.arch = 'fpn_resnet'
-        configs.batch_size = 4
-        configs.img_size = 608
-        configs.conf_thresh = 0.5
-        configs.nms_thresh = 0.4
-        configs.num_samples = None
-        configs.num_workers = 4
+        configs.model_path = os.path.join(parent_directory, 'tools', 'objdet_models', 'resnet')
+        configs.pretrained_file = os.path.join(configs.model_path, 'pretrained', 'fpn_resnet_18_epoch_300.pth')
+        configs.pretrained_path = 'tools/objdet_models/resnet/pretrained/fpn_resnet_18_epoch_300.pth' #debug
         configs.pin_memory = True
+        configs.use_giou_loss = False
+
+        configs.imagenet_pretrained = False
+        configs.head_conv = 64
+        configs.num_classes = 3
+        configs.num_center_offset = 2
+        configs.num_z = 1
+        configs.num_dim = 3
+        configs.num_direction = 2  # sin, cos
+
+        
+        # configs.heads = {
+        #     'center_heatmap': configs.num_classes ,
+        #     'center_offset': configs.center_offset_count,
+        #     'direction_vector': configs.direction_count,
+        #     'z_coordinate': configs.z_axis_count,
+        #     'dimensions': configs.dimension_count
+        # }
+
+        #fix bug for stackoverflow from mentor
+        configs.input_size = (608, 608)
+        configs.hm_size = (152, 152)
+        configs.down_ratio = 4
+        configs.max_objects = 50
+        #fix bug for Udacity mentor
+        # configs.heads = {
+        #     'hm_cen': configs.num_classes,
+        #     'cen_offset': configs.num_center_offset,
+        #     'direction': configs.num_direction,
+        #     'z_coor': configs.num_z,
+        #     'dim': configs.num_dim
+        # }
+        configs.heads = {
+            'hm_cen': configs.num_classes,
+            'cen_offset': configs.num_center_offset,
+            'direction': configs.num_direction,
+            'z_coor': configs.num_z,
+            'dim': configs.num_dim
+        }
+        configs.num_input_features = 4
+        #reference  https://github.com/polarbeargo/nd013-Mid-Term-Project-3D-Object-Detection/blob/main/student/objdet_detect.py#L87
+        configs.K = 50
+        configs.batch_size = 1
+        configs.peak_thresh = 0.5
+        configs.conf_thresh = configs.peak_thresh # NOTE: there seems to be some confusion on the name of this variable
+        configs.distributed = False
         #######
-        ####### ID_S3_EX1-3 END #######     
+        ####### ID_S3_EX1-3 END #######
 
     else:
         raise ValueError("Error: Invalid model name")
@@ -81,6 +126,9 @@ def load_configs_model(model_name='darknet', configs=None):
     configs.no_cuda = True # if true, cuda is not used
     configs.gpu_idx = 0  # GPU index to use.
     configs.device = torch.device('cpu' if configs.no_cuda else 'cuda:{}'.format(configs.gpu_idx))
+
+    # Additional configuration parameter
+    #configs.minimum_iou_threshold = 0.5
 
     return configs
 
@@ -110,23 +158,29 @@ def load_configs(model_name='fpn_resnet', configs=None):
     return configs
 
 
+
 # create model according to selected model type
 def create_model(configs):
 
     # check for availability of model file
-    assert os.path.isfile(configs.pretrained_filename), "No file at {}".format(configs.pretrained_filename)
+    assert os.path.isfile(configs.pretrained_file), "No file at {}".format(configs.pretrained_file)
+    #print("Looking for pretrained model at:", configs.pretrained_file)
 
     # create model depending on architecture name
     if (configs.arch == 'darknet') and (configs.cfgfile is not None):
         print('using darknet')
-        model = darknet(cfgfile=configs.cfgfile, use_giou_loss=configs.use_giou_loss)    
+        model = darknet(cfgfile=configs.cfgfile, use_giou_loss=configs.use_giou_loss)  
     
     elif 'fpn_resnet' in configs.arch:
         print('using ResNet architecture with feature pyramid')
         
         ####### ID_S3_EX1-4 START #######     
         #######
-        model = fpn_resnet(pretrained=False)
+        print("student task ID_S3_EX1-4")
+        # num_layers = 18
+        model = fpn_resnet.get_pose_net(num_layers = 18, heads = configs.heads, 
+                                        head_conv= configs.head_conv, 
+                                        imagenet_pretrained = configs.imagenet_pretrained)
         #######
         ####### ID_S3_EX1-4 END #######     
    
@@ -134,8 +188,13 @@ def create_model(configs):
         assert False, 'Undefined model backbone'
 
     # load model weights
-    model.load_state_dict(torch.load(configs.pretrained_filename, map_location='cpu'))
-    print('Loaded weights from {}\n'.format(configs.pretrained_filename))
+    print("load model weights ......")
+    # model.load_state_dict(torch.load(configs.pretrained_file, map_location='cpu'))
+    try:
+        model.load_state_dict(torch.load(configs.pretrained_file, map_location='cpu'), strict=False)
+        print('Loaded weights from {}\n'.format(configs.pretrained_file))
+    except RuntimeError as e:
+        print("Error loading model state_dict:", e)
 
     # set model to evaluation state
     configs.device = torch.device('cpu' if configs.no_cuda else 'cuda:{}'.format(configs.gpu_idx))
