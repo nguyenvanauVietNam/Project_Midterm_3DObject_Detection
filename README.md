@@ -131,3 +131,15 @@ Parts of this project are based on the following repositories:
 
 ## License
 [License](LICENSE.md)
+
+## reference
+- **Github**
+https://github.com/udacity/nd013-c2-fusion-starter.git
+https://github.com/adamdivak/udacity_sd_lidar_fusion.git
+https://github.com/mabhi16/3D_Object_detection_midterm.git
+https://github.com/polarbeargo/nd013-Mid-Term-Project-3D-Object-Detection.git
+
+- **ChatGPT**
+- **Tabnine**
+- **Mentor Udacity**
+- **Mentor StackOverflow**

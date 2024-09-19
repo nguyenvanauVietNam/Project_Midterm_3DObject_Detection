@@ -217,3 +217,21 @@ Integrating radar could improve velocity measurements. Radar provides direct vel
 
 ### More Robust Track Management
 Implementing adaptive thresholding based on scene context could prevent unnecessary track deletions and reinforce valid tracks more effectively.
+
+
+
+
+
+
+
+## reference
+- **Github**
+https://github.com/udacity/nd013-c2-fusion-starter.git
+https://github.com/adamdivak/udacity_sd_lidar_fusion.git
+https://github.com/mabhi16/3D_Object_detection_midterm.git
+https://github.com/polarbeargo/nd013-Mid-Term-Project-3D-Object-Detection.git
+
+- **ChatGPT**
+- **Tabnine**
+- **Mentor Udacity**
+- **Mentor StackOverflow**

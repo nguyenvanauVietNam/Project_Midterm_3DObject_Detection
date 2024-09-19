@@ -8,6 +8,10 @@
 #
 # https://www.udacity.com/course/self-driving-car-engineer-nanodegree--nd013
 # ---------------------------------------------------------------------
+# https://github.com/udacity/nd013-c2-fusion-starter.git
+# https://github.com/adamdivak/udacity_sd_lidar_fusion.git
+# https://github.com/mabhi16/3D_Object_detection_midterm.git
+# https://github.com/polarbeargo/nd013-Mid-Term-Project-3D-Object-Detection.git
 #
 
 # imports
