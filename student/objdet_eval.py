@@ -39,6 +39,7 @@ import misc.objdet_tools as tools
 def measure_detection_performance(detections, labels, labels_valid, min_iou=0.5):
     
     # find best detection for each valid label 
+    print("student task ID_S4_EX1 ")
     true_positives = 0  # no. of correctly detected objects
     center_devs = []
     ious = []

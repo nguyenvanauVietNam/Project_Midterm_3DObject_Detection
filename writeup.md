@@ -98,6 +98,18 @@ exec_detection = ['bev_from_pcl', 'detect_objects']
 exec_tracking = [] 
 exec_visualization = ['show_objects_in_bev_labels_in_camera'] 
 
+⚠️ Add a second model from a GitHub repo (ID_S3_EX1)
+	
+⚠️ Extract 3D bounding boxes from model response (ID_S3_EX2)
+⚠️ Compute intersection-over-union (IOU) between labels and detections (ID_S4_EX1)
+⚠️ Compute false-negatives and false-positives (ID_S4_EX2)
+⚠️ Compute precision and recall (ID_S4_EX3)
+
+
+
+
+
+
 ## Section 4 : Performance Evaluation for Object Detection
 data_filename = 'training_segment-1005081002024129653_5313_150_5333_150_with_camera_labels.tfrecord' # Sequence 2
 show_only_frames = [50, 51] 

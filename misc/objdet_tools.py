@@ -280,15 +280,15 @@ def convert_labels_into_objects(object_labels, configs):
     
     
     detections = []
-    # for label in object_labels:
-    #     # transform label into a candidate object
-    #     if label.type==1 : # only use vehicles
-    #         candidate = [label.type, label.box.center_x, label.box.center_y, label.box.center_z,
-    #                      label.box.height, label.box.width, label.box.length, label.box.heading]
+    for label in object_labels:
+        # transform label into a candidate object
+        if label.type==1 : # only use vehicles
+            candidate = [label.type, label.box.center_x, label.box.center_y, label.box.center_z,
+                         label.box.height, label.box.width, label.box.length, label.box.heading]
 
-    #         # only add to object list if candidate is within detection area    
-    #         if(is_label_inside_detection_area(candidate, configs)):
-    #             detections.append(candidate)
+            # only add to object list if candidate is within detection area    
+            if(is_label_inside_detection_area(candidate, configs)):
+                detections.append(candidate)
 
     return detections
 
