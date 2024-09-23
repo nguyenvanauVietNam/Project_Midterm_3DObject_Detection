@@ -98,17 +98,58 @@ exec_detection = ['bev_from_pcl', 'detect_objects']
 exec_tracking = [] 
 exec_visualization = ['show_objects_in_bev_labels_in_camera'] 
 
+First of all, It was nice going through the work. You implement the below parts really well 💪
+
+🎯 Visualize range image channels (ID_S1_EX1)
+🎯 Visualize point-cloud (ID_S1_EX2)
+🎯 Convert sensor coordinates to bev-map coordinates (ID_S2_EX1)
+🎯 Compute intensity layer of bev-map (ID_S2_EX2)
+🎯 Compute height layer of bev-map (ID_S2_EX3)
+However, a few parts need to be modified to make the project more perfect.
+
 ⚠️ Add a second model from a GitHub repo (ID_S3_EX1)
+	In file loop_over_dataset.py, set the attributes for code execution in the following
+	and clone git:
+	git@github.com:maudzung/SFA3D.git
+	data_filename = 'training_segment-1005081002024129653_5313_150_5333_150_with_camera_labels.tfrecord'
+	show_only_frames = [50, 51]
+	exec_data = ['pcl_from_rangeimage', 'load_image']
+	exec_detection = ['bev_from_pcl', 'detect_objects']
+	exec_tracking = []
+	exec_visualization = ['show_objects_in_bev_labels_in_camera']
+	configs_det = det.load_configs(model_name="fpn_resnet")
 	
 ⚠️ Extract 3D bounding boxes from model response (ID_S3_EX2)
+	In file loop_over_dataset.py, set the attributes for code execution in the following
+	
+	data_filename = 'training_segment-1005081002024129653_5313_150_5333_150_with_camera_labels.tfrecord'
+	show_only_frames = [50, 51]
+	exec_data = ['pcl_from_rangeimage', 'load_image']
+	exec_detection = ['bev_from_pcl', 'detect_objects']
+	exec_tracking = []
+	exec_visualization = ['show_objects_in_bev_labels_in_camera']
+	configs_det = det.load_configs(model_name="fpn_resnet")
+	
 ⚠️ Compute intersection-over-union (IOU) between labels and detections (ID_S4_EX1)
+
+	data_filename = 'training_segment-1005081002024129653_5313_150_5333_150_with_camera_labels.tfrecord'
+	show_only_frames = [50, 51]
+	exec_data = ['pcl_from_rangeimage']
+	exec_detection = ['bev_from_pcl', 'detect_objects', 'validate_object_labels', 'measure_detection_performance']
+	exec_tracking = []
+	exec_visualization = ['show_detection_performance']
+	configs_det = det.load_configs(model_name="darknet")
+	
 ⚠️ Compute false-negatives and false-positives (ID_S4_EX2)
+ => fixed
 ⚠️ Compute precision and recall (ID_S4_EX3)
-
-
-
-
-
+	data_filename = 'training_segment-1005081002024129653_5313_150_5333_150_with_camera_labels.tfrecord'
+	show_only_frames = [50, 51]
+	exec_data = ['pcl_from_rangeimage']
+	exec_detection = ['bev_from_pcl', 'detect_objects', 'validate_object_labels', 'measure_detection_performance']
+	exec_tracking = []
+	exec_visualization = ['show_detection_performance']
+	configs_det = det.load_configs(model_name="darknet")
 
 ## Section 4 : Performance Evaluation for Object Detection
 data_filename = 'training_segment-1005081002024129653_5313_150_5333_150_with_camera_labels.tfrecord' # Sequence 2
