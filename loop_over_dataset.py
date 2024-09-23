@@ -60,7 +60,7 @@ show_only_frames = [150, 200] # show only frames in interval for debugging
 # results_fullpath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'results')
 data_fullpath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'dataset', data_filename)
 model_name = "fpn_resnet" # options are 'darknet', 'fpn_resnet'
-sequence_num = "1"
+sequence_num = "2"
 results_fullpath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'results/' + model_name + '/results_sequence_' + sequence_num + '_' + model_name)
 
 datafile = WaymoDataFileReader(data_fullpath)

@@ -171,7 +171,7 @@ def bev_from_pcl(lidar_point_cloud, configs):
     lidar_pcl_bev[:, 0] = np.int_(np.floor(lidar_pcl_bev[:, 0] / bev_discretization))
     lidar_pcl_bev[:, 1] = np.int_(np.floor(lidar_pcl_bev[:, 1] / bev_discretization)) + (configs.bev_width + 1) / 2
     # step 3 : perform the same operation as in step 2 for the y-coordinates but make sure that no negative bev-coordinates occur
-    lidar_pcl_bev[:, 2] = lidar_pcl_bev[:, 2] / bev_discretization
+    #   lidar_pcl_bev[:, 2] = lidar_pcl_bev[:, 2] / bev_discretization
 
     # Visualize the transformed point cloud (for debugging purposes)
     show_pcl(lidar_pcl_bev)
