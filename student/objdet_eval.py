@@ -39,7 +39,6 @@ import misc.objdet_tools as tools
 def measure_detection_performance(detections, labels, labels_valid, min_iou=0.5):
     
     # find best detection for each valid label 
-    print("student task ID_S4_EX1 ")
     true_positives = 0  # no. of correctly detected objects
     center_devs = []
     ious = []
@@ -54,31 +53,52 @@ def measure_detection_performance(detections, labels, labels_valid, min_iou=0.5)
             print("student task ID_S4_EX1 ")
 
             ## step 1 : extract the four corners of the current label bounding-box
-            label_poly = Polygon([(label[1], label[2]), (label[1] + label[4], label[2]),
-                                  (label[1] + label[4], label[2] + label[5]), (label[1], label[2] + label[5])])
-            
+            # label_poly = Polygon([(label[1], label[2]), (label[1] + label[4], label[2]),
+            #                       (label[1] + label[4], label[2] + label[5]), (label[1], label[2] + label[5])])
+            #Fix bug base comment mentor
+            label_box = label.box
+            label_temp_corners = tools.compute_box_corners(label_box.center_x, label_box.center_y, label_box.width, label_box.length, label_box.heading)
+            #label_poly = Polygon(label_temp_corners)
+
             ## step 2 : loop over all detected objects
             for detection in detections:
-                det_id, temp_x, temp_y, temp_z, temp_h, temp_width, temp_length, temp_yaw = detection
-                
+                #det_id, x, y, z, h, w, l,yaw = detection
+                if len(detection) == 7:
+                    det_id,x, y, z, w, l, h ,yaw = detection
+                    print(detection)
+                    detections_container = tools.compute_box_corners(x, y, w, l, 0)
+                    yaw = 0  # Thêm giá trị mặc định cho yaw nếu bị thiếu
+                else:
+                    det_id, x, y, z, h, w, l, yaw = detection
+                    detections_container = tools.compute_box_corners(x, y, w, l, yaw)
+                 
                 ## step 3 : extract the four corners of the current detection
-                det_poly = Polygon([(temp_x, temp_y), (temp_x + temp_length, temp_y),
-                                    (temp_x + temp_length, temp_y + temp_width), (temp_x, temp_y + temp_width)])
-                
+                # det_poly = Polygon([(temp_x, temp_y), (temp_x + temp_length, temp_y),
+                #                     (temp_x + temp_length, temp_y + temp_width), (temp_x, temp_y + temp_width)])
+
                 ## step 4 : compute the center distance between label and detection bounding-box in x, y, and z
-                center_dist_x = abs((label[1] + label[4] / 2) - (temp_x + temp_length / 2))
-                center_dist_y = abs((label[2] + label[5] / 2) - (temp_y + temp_width / 2))
-                center_dist_z = abs(label[3] - temp_z)
+                center_dist_x = label_box.center_x - x
+                center_dist_y = label_box.center_y - y
+                center_dist_z = label_box.center_z - z
+                distance_label = np.array([label_box.center_x, label_box.center_y, label_box.center_z]) - np.array([x, y, z])
                 
                 ## step 5 : compute the intersection over union (IOU) between label and detection bounding-box
-                intersection_area = label_poly.intersection(det_poly).area
-                union_area = label_poly.union(det_poly).area
-                iou = intersection_area / union_area if union_area > 0 else 0
+                # intersection_area = label_poly.intersection(det_poly).area
+                # union_area = label_poly.union(det_poly).area
+
+                # iou = intersection_area / union_area if union_area > 0 else 0
+                label_poly = Polygon(label_temp_corners)
+                detecion_label_poly = Polygon(detections_container)
+
+                inter_label = detecion_label_poly.intersection(label_poly)
+                union_label = detecion_label_poly.union(label_poly)
+                iou = inter_label.area / union_label.area
                 
                 ## step 6 : if IOU exceeds min_iou threshold, store [iou, dist_x, dist_y, dist_z] in matches_lab_det and increase the TP count
                 if iou > min_iou:
+                    center_dist_x, center_dist_y, center_dist_z = distance_label
                     matches_lab_det.append([iou, center_dist_x, center_dist_y, center_dist_z])
-                    true_positives += 1
+                    #true_positives += 1
             
             #######
             ####### ID_S4_EX1 END #######     

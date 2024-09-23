@@ -18,7 +18,7 @@
 import numpy as np
 import torch
 from easydict import EasyDict as edict
-
+import tools.objdet_models.resnet.utils.torch_utils as torch_utils
 # add project directory to python path to enable relative imports
 import os
 import sys
@@ -234,15 +234,34 @@ def detect_objects(input_bev_maps, model, configs):
             
             ####### ID_S3_EX1-5 START #######     
             #######
-            output_post = post_processing(outputs, conf_thresh=configs.conf_thresh, nms_thresh=configs.nms_thresh)
-            detections = []
-            for sample_i in range(len(output_post)):
-                if output_post[sample_i] is None:
-                    continue
-                detection = output_post[sample_i]
-                for obj in detection:
-                    x, y, z, w, l, h = obj
-                    detections.append([1, x, y, z, w, l, h]) 
+            print("student task ID_S3_EX1-5")
+
+            # Apply sigmoid to the corresponding outputs
+            heatmap_center = torch_utils._sigmoid(outputs["hm_cen"])
+            center_offset = torch_utils._sigmoid(outputs["cen_offset"])
+
+            # Decode the outputs to obtain the list of detections
+            decoded_detections = decode(
+                heatmap_center, 
+                center_offset, 
+                outputs["direction"], 
+                outputs["z_coor"], 
+                outputs["dim"], 
+                K=configs.max_objects
+            )
+
+            # Move data to CPU and convert to numpy format with float32 type
+            detections_numpy = decoded_detections.cpu().numpy().astype(np.float32)
+
+            # Process the detections after decoding
+            processed_detections = post_processing(detections_numpy, configs)
+
+            # Retrieve the results from the first layer, selecting only valid detections
+            valid_detections = processed_detections[0][1]
+
+            # Print the processed detections
+            print(valid_detections)
+
             #######
             ####### ID_S3_EX1-5 END #######     
 
@@ -258,31 +277,23 @@ def detect_objects(input_bev_maps, model, configs):
 
     ## step 2 : loop over all detections
     for detection in detections:
-        id, temp_x, temp_y, z, height, temp_width, temp_length, dtc = detection
+        id, x, y, z, h, w, l, yaw = detection
 
         # Convert BEV coordinates to world coordinates
-        x = (temp_y / configs.bev_height) * (configs.lim_x[1] - configs.lim_x[0]) + configs.lim_x[0]
-        y = (temp_x / configs.bev_width) * (configs.lim_y[1] - configs.lim_y[0]) - (configs.lim_y[1] - configs.lim_y[0]) / 2.0
-        width = (temp_width / configs.bev_width) * (configs.lim_y[1] - configs.lim_y[0])
-        length = (temp_length / configs.bev_height) * (configs.lim_x[1] - configs.lim_x[0])
+        xx = (y / configs.bev_height) * (configs.lim_x[1] - configs.lim_x[0]) + configs.lim_x[0]
+        yy = (x / configs.bev_width) * (configs.lim_y[1] - configs.lim_y[0]) - (configs.lim_y[1] - configs.lim_y[0]) / 2.0
+        ww = (w / configs.bev_width) * (configs.lim_y[1] - configs.lim_y[0])
+        ll = (l / configs.bev_height) * (configs.lim_x[1] - configs.lim_x[0])
         
         # Apply limits
-        x = max(min(x, configs.lim_x[1]), configs.lim_x[0])
-        y = max(min(y, configs.lim_y[1]), configs.lim_y[0])
-        z = max(min(z, configs.lim_z[1]), configs.lim_z[0])
-        width = max(min(width, configs.lim_r[1]), configs.lim_r[0])  # Assuming `lim_r` is used for width
-        length = max(min(length, configs.lim_r[1]), configs.lim_r[0])  # Assuming `lim_r` is used for length
+        xx = max(min(x, configs.lim_x[1]), configs.lim_x[0])
+        yy = max(min(y, configs.lim_y[1]), configs.lim_y[0])
+        zz = max(min(z, configs.lim_z[1]), configs.lim_z[0])
+        ww = max(min(w, configs.lim_r[1]), configs.lim_r[0])  # Assuming `lim_r` is used for width
+        ll = max(min(l, configs.lim_r[1]), configs.lim_r[0])  # Assuming `lim_r` is used for length
 
         ## step 3 : append the current object to the 'objects' array
-        objects.append({
-            'x': x,
-            'y': y,
-            'z': z,
-            'width': width,
-            'length': length,
-            'height': height,
-            'detected': dtc
-        })
+        objects.append([1, xx, yy, zz, h, ww, ll, yaw])
 
     #######
     ####### ID_S3_EX2 END #######
