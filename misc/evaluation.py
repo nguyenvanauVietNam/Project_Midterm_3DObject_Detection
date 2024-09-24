@@ -175,7 +175,7 @@ def plot_rmse(manager, all_labels):
     
     # loop over all tracks
     for track_id in range(manager.last_id+1):
-        rmse_sum = 0
+        rmse_sum = 0.0
         cnt = 0
         rmse = []
         time = []
@@ -233,8 +233,9 @@ def make_movie(path):
     frame = cv2.imread(os.path.join(path, images[0]))
     height, width, layers = frame.shape
 
-    # save with 10fps to result dir
-    video = cv2.VideoWriter(os.path.join(path, 'my_tracking_results.avi'), 0, 10, (width,height))
+    # save with 10fps to result directory
+    video_path = os.path.join(path, 'my_tracking_results.avi')
+    video = cv2.VideoWriter(video_path, 0, 10, (width,height))
 
     for image in images:
         fname = os.path.join(path, image)
@@ -243,3 +244,6 @@ def make_movie(path):
 
     cv2.destroyAllWindows()
     video.release()
+
+    # Print the path to the saved video
+    print(f"Video saved at: {video_path}")

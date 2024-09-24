@@ -80,66 +80,65 @@ class Association:
         # END student code
         ############ 
   
+    def get_closest_track_and_meas(self):
+        ############
+        # TODO Step 3: find closest track and measurement:
+        # - find minimum entry in association matrix
+        # - delete row and column
+        # - remove corresponding track and measurement from unassigned_tracks and unassigned_meas
+        # - return this track and measurement
+        ############
+        # the following only works for at most one track and one measurement
+        update_track = 0
+        update_track = 0
 
-def get_closest_track_and_meas(self):
-    ############
-    # TODO Step 3: find closest track and measurement:
-    # - find minimum entry in association matrix
-    # - delete row and column
-    # - remove corresponding track and measurement from unassigned_tracks and unassigned_meas
-    # - return this track and measurement
-    ############
-    # the following only works for at most one track and one measurement
-    update_track = 0
-    update_track = 0
+        # Check for minimum entry in the association matrix
+        association_matrix = self.association_matrix
+        if np.min(association_matrix) == np.inf:
+            return np.nan, np.nan  # Return NaN if no valid associations exist
 
-    # Check for minimum entry in the association matrix
-    association_matrix = self.association_matrix
-    if np.min(association_matrix) == np.inf:
-        return np.nan, np.nan  # Return NaN if no valid associations exist
+        # Get indices of the minimum entry in the association matrix
+        min_indices = np.unravel_index(np.argmin(association_matrix, axis=None), association_matrix.shape) 
+        update_track = min_indices[0]
+        update_track = min_indices[1]
 
-    # Get indices of the minimum entry in the association matrix
-    min_indices = np.unravel_index(np.argmin(association_matrix, axis=None), association_matrix.shape) 
-    update_track = min_indices[0]
-    update_track = min_indices[1]
+        # Delete the corresponding row and column for the next update
+        association_matrix = np.delete(association_matrix, update_track, 0) 
+        association_matrix = np.delete(association_matrix, update_track, 1)
+        self.association_matrix = association_matrix
 
-    # Delete the corresponding row and column for the next update
-    association_matrix = np.delete(association_matrix, update_track, 0) 
-    association_matrix = np.delete(association_matrix, update_track, 1)
-    self.association_matrix = association_matrix
+        # Update the closest track and measurement using the indices
+        update_track = self.unassigned_tracks[update_track] 
+        update_meas = self.unassigned_meas[update_track]
 
-    # Update the closest track and measurement using the indices
-    update_track = self.unassigned_tracks[update_track] 
-    update_meas = self.unassigned_meas[update_track]
+        # remove from list
+        self.unassigned_tracks.remove(update_track) 
+        self.unassigned_meas.remove(update_meas)
+        self.association_matrix = np.matrix([])
 
-    # remove from list
-    self.unassigned_tracks.remove(update_track) 
-    self.unassigned_meas.remove(update_meas)
-    self.association_matrix = np.matrix([])
-
-    ############
-    # END student code
-    ############ 
-    # Return the closest track and measurement indices
-    return update_track, update_meas   
-
+        ############
+        # END student code
+        ############ 
+        # Return the closest track and measurement indices
+        return update_track, update_meas   
 
 
 
-def gating(self, MHD, sensor): 
-    ############
-    # TODO Step 3: return True if measurement lies inside gate, otherwise False
-    ############
-        # gating_threshold_value: the threshold value based on the chi-squared distribution that determines if the measurement is inside the gate
-        gating_threshold_value = chi2.ppf(params.gating_threshold, df=sensor.dim_meas)
+
+    def gating(self, MHD, sensor): 
+        ############
+        # TODO Step 3: return True if measurement lies inside gate, otherwise False
+        ############
+            # gating_threshold_value: the threshold value based on the chi-squared distribution that determines if the measurement is inside the gate
+            gating_threshold_value = chi2.ppf(params.gating_threshold, df=sensor.dim_meas)
+            
+            # return True if Mahalanobis distance (MHD) is less than the gating threshold, meaning the measurement is within the valid range
+            return MHD < gating_threshold_value
+        ############
+        # END student code
+        ############ 
         
-        # return True if Mahalanobis distance (MHD) is less than the gating threshold, meaning the measurement is within the valid range
-        return MHD < gating_threshold_value
-    ############
-    # END student code
-    ############ 
-    
-def associate_and_update(self, manager, meas_list, KF):
+    def associate_and_update(self, manager, meas_list, KF):
         # associate measurements and tracks
         self.associate(manager.track_list, meas_list, KF)
     
@@ -171,25 +170,25 @@ def associate_and_update(self, manager, meas_list, KF):
         manager.manage_tracks(self.unassigned_tracks, self.unassigned_meas, meas_list)
         
         for track in manager.track_list:            
-            print('track', track.id, 'score =', track.score)   
+            print('track', track.id, 'score =', track.score)
 
-def MHD(self, track, meas, KF):
-        ############
-        # TODO Step 3: calculate and return Mahalanobis distance
-        ############
+    def MHD(self, track, meas, KF):
+            ############
+            # TODO Step 3: calculate and return Mahalanobis distance
+            ############
 
-        # measurement_mapping_matrix: the matrix that maps the object's state into the measurement space
-        measurement_mapping_matrix = meas.sensor.get_H(track.x)
-    
-         # inverse_covariance_matrix: the inverse of the covariance matrix S (which represents the uncertainty between prediction and measurement)
-        inverse_covariance_matrix = np.linalg.inv(KF.S(track, meas, measurement_mapping_matrix))
+            # measurement_mapping_matrix: the matrix that maps the object's state into the measurement space
+            measurement_mapping_matrix = meas.sensor.get_H(track.x)
+        
+            # inverse_covariance_matrix: the inverse of the covariance matrix S (which represents the uncertainty between prediction and measurement)
+            inverse_covariance_matrix = np.linalg.inv(KF.S(track, meas, measurement_mapping_matrix))
 
-        # residual_vector: the difference between the actual measurement and the predicted measurement from the track
-        residual_vector = KF.gamma(track, meas)
+            # residual_vector: the difference between the actual measurement and the predicted measurement from the track
+            residual_vector = KF.gamma(track, meas)
 
-        # returns the Mahalanobis distance, which measures the distance between the track and the measurement
-        return residual_vector.T @ inverse_covariance_matrix @ residual_vector
+            # returns the Mahalanobis distance, which measures the distance between the track and the measurement
+            return residual_vector.T @ inverse_covariance_matrix @ residual_vector
 
-        ############
-        # END student code
-        ############ 
+            ############
+            # END student code
+            ############ 

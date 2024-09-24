@@ -30,6 +30,7 @@ class Filter:
     def __init__(self):
         pass
 
+
     def F(self):
         ############
         # TODO Step 1: Implement and return system matrix F
@@ -37,13 +38,13 @@ class Filter:
         # This matrix accounts for how the state evolves over time.
         ############
         delta_time = params.dt  # Time step from params
-        return np.matrix([[1, 0, 0, delta_time, 0 ,0],
+        F = np.matrix([[1, 0, 0, delta_time, 0 ,0],
                           [0, 1, 0, 0, delta_time, 0],
                           [0, 0, 1, 0, 0, delta_time],
                           [0, 0, 0, 1, 0, 0],
                           [0, 0, 0, 0, 1, 0], 
                           [0, 0, 0, 0, 0, 1]])
-        
+        return F # Return the system matrix F that governs state transitions
         ############
         # END student code
         ############ 
@@ -76,16 +77,17 @@ class Filter:
         # This method should update the state and covariance estimates for the track based on the Kalman filter equations.
         # It performs the prediction step using the system matrix F and process noise covariance Q.
         ############
-        system_matrix = self.F()  # System matrix F
-        state_estimate = track.x  # Current state estimate
-        error_covariance = track.P  # Current estimation error covariance
+        # Fixbug base comment memtor
+        system_matrix = self.F() * track.x # System matrix F
+        # state_estimate = track.x  # Current state estimate
+        #error_covariance = track.P  # Current estimation error covariance
         
         # Predict the state and covariance
-        state_prediction = system_matrix @ state_estimate
-        covariance_prediction = system_matrix @ error_covariance @ system_matrix.T + self.Q()
+        #state_prediction = system_matrix @ state_estimate
+        covariance_prediction = self.F() * track.P * self.F().transpose() + self.Q()
         
         # Update track with predictions
-        track.set_x(state_prediction)
+        track.set_x(system_matrix)
         track.set_P(covariance_prediction)
         
         ############
@@ -98,22 +100,23 @@ class Filter:
         # This method should adjust the state and covariance estimates based on the new measurement.
         # It performs the update step using the measurement matrix H, residual gamma, and covariance of residual S.
         ############
-        measurement_matrix = meas.sensor.get_H(track.x)  # Measurement matrix H
-        residual_gamma = self.gamma(track, meas)  # Residual gamma
-        residual_covariance = self.S(track, meas, measurement_matrix)  # Covariance of residual S
-        
-        # Calculate Kalman gain
-        kalman_gain = track.P @ measurement_matrix.T @ np.linalg.inv(residual_covariance)
-        
-        # Update state and covariance
-        updated_state = track.x + kalman_gain @ residual_gamma
-        identity_matrix = np.eye(params.dim_state)
-        updated_covariance = (identity_matrix - kalman_gain @ measurement_matrix) @ track.P
+        HH  = meas.sensor.get_H(track.x)  # Measurement matrix H
+        SS = self.S(track, meas, HH)  # Covariance of residual S
+        KK = track.P * HH.transpose() * SS.I
+        updated_state = track.x + K * self.gamma(track, meas)
+        updated_covariance = (np.identity(params.dim_state) - KK * HH) * track.P
+
+
+        #Fix bug base on mentor
+        track.update_attributes(meas)
         
         # Save updated state and covariance in track
         track.set_x(updated_state)
         track.set_P(updated_covariance)
-        track.update_attributes(meas)
+
+
+
+
     
     def gamma(self, track, meas):
         ############
@@ -136,7 +139,7 @@ class Filter:
         # The covariance of the residual S is used to measure the uncertainty of the prediction.
         # It accounts for the noise in the measurement and the prediction.
         ############
-        residual_covariance = measurement_matrix @ track.P @ measurement_matrix.T + meas.R  # Covariance of residual
+        residual_covariance = measurement_matrix * track.P * measurement_matrix.transpose() + meas.R # Covariance of residual
         
         return residual_covariance
         

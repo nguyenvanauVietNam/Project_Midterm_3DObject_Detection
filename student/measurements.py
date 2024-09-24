@@ -233,7 +233,7 @@ class Measurement:
             self.z = np.zeros((sensor.dim_meas, 1))  # Measurement vector with size based on dim_meas
             self.z[0] = z[0] 
             self.z[1] = z[1]  
-            self.z[2] = z[2]
+            #self.z[2] = z[2]
             
             # Measurement noise covariance matrix
             self.R = np.matrix([[camera_noise_std_i**2, 0],   # Noise in the i direction

@@ -257,10 +257,10 @@ def detect_objects(input_bev_maps, model, configs):
             processed_detections = post_processing(detections_numpy, configs)
 
             # Retrieve the results from the first layer, selecting only valid detections
-            valid_detections = processed_detections[0][1]
+            detections = processed_detections[0][1]
 
             # Print the processed detections
-            print(valid_detections)
+            print(detections)
 
             #######
             ####### ID_S3_EX1-5 END #######     
@@ -272,7 +272,9 @@ def detect_objects(input_bev_maps, model, configs):
     objects = [] 
 
     ## step 1 : check whether there are any detections
-    if not detections:
+    #if not detections:
+    #fix bug     if not detections: ValueError: The truth value of a
+    if len(detections) > 0:
         return objects
 
     ## step 2 : loop over all detections

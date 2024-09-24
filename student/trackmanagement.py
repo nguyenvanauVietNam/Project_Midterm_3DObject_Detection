@@ -33,41 +33,63 @@ class Track:
         M_rot = meas.sensor.sens_to_veh[0:3, 0:3] # rotation matrix from sensor to vehicle coordinates
         
         ############
-        # Initialization of track state and covariance matrix
-        # - Replace fixed values with initialization based on the measurement
-        # - Initialize state and covariance matrix P with appropriate values
+        # TODO Step 2: initialization:
+        # - replace fixed track initialization values by initialization of x and P based on 
+        # unassigned measurement transformed from sensor to vehicle coordinates
+        # - initialize track state and track score with appropriate values
         ############
 
-        # Transform measurement from sensor to vehicle coordinates
-        pos_sens = np.ones((4, 1))
-        pos_sens[0:3] = meas.z[0:3]
-        pos_veh = meas.sensor.sens_to_veh @ pos_sens
-        self.x = np.zeros((6, 1))
-        self.x[0:3] = pos_veh[0:3]
-        
-        # Compute covariance matrix P based on the measurement
-        P_pos = M_rot @ meas.R @ np.transpose(M_rot)
-        P_vel = np.matrix([[params.sigma_p44**2, 0, 0],
-                           [0, params.sigma_p55**2, 0],
-                           [0, 0, params.sigma_p66**2]])
-        self.P = np.zeros((6, 6))
-        self.P[0:3, 0:3] = P_pos
-        self.P[3:6, 3:6] = P_vel
-        
-        # Initialize track state and score
-        self.state = 'initialized'
-        self.score = 1 / params.window
-        
+        # self.x = np.matrix([[49.53980697],
+        #                 [ 3.41006279],
+        #                 [ 0.91790581],
+        #                 [ 0.        ],
+        #                 [ 0.        ],
+        #                 [ 0.        ]])
+        # self.P = np.matrix([[9.0e-02, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00],
+        #                 [0.0e+00, 9.0e-02, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00],
+        #                 [0.0e+00, 0.0e+00, 6.4e-03, 0.0e+00, 0.0e+00, 0.0e+00],
+        #                 [0.0e+00, 0.0e+00, 0.0e+00, 2.5e+03, 0.0e+00, 0.0e+00],
+        #                 [0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 2.5e+03, 0.0e+00],
+        #                 [0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 2.5e+01]])
+        self.state = 'confirmed'
+        self.score = 0
+        position_sensor_frame = np.ones((4, 1))  # Create a column vector of ones for homogeneous coordinates
+        position_sensor_frame[0:3] = meas.z[0:3]  # Assign the first three elements from the measurement's position
+
+        position_vehicle_frame = meas.sensor.sens_to_veh * position_sensor_frame  # Transform from sensor frame to vehicle frame
+
+        self.x = np.zeros((6, 1))  # Initialize state vector (position + velocity) with zeros
+        self.x[0:3] = position_vehicle_frame[0:3]  # Assign transformed position (x, y, z) to the state vector
+
+        position_covariance = M_rot * meas.R * M_rot.T  # Rotate and optimize position covariance matrix
+
+        velocity_covariance = np.matrix([  # Optimize velocity covariance based on observed speed
+            [params.sigma_p44**2, 0, 0], 
+            [0, params.sigma_p55**2, 0], 
+            [0, 0, params.sigma_p66**2]
+        ])
+
+        self.P = np.zeros((6, 6))  # Initialize covariance matrix for position and velocity
+        self.P[0:3, 0:3] = position_covariance  # Assign optimized position covariance
+        self.P[3:6, 3:6] = velocity_covariance  # Assign optimized velocity covariance
+
+        self.state = 'Initialized'  # Mark the track state as initialized
+
+        self.last_detections = collections.deque(params.window * [0], params.window)  # Initialize deque to track detection history
+        self.last_detections.append(1)  # Append 1 to indicate a successful detection in the current frame
+
+        self.score = sum(self.last_detections) / len(self.last_detections)  # Update the score based on the last detections
+
         ############
         # END student code
         ############ 
                
-        # Other track attributes
+        # other track attributes
         self.id = id
         self.width = meas.width
         self.length = meas.length
         self.height = meas.height
-        self.yaw = np.arccos(M_rot[0,0]*np.cos(meas.yaw) + M_rot[0,1]*np.sin(meas.yaw)) # transform yaw from sensor to vehicle coordinates
+        self.yaw =  np.arccos(M_rot[0,0]*np.cos(meas.yaw) + M_rot[0,1]*np.sin(meas.yaw)) # transform rotation from sensor to vehicle coordinates
         self.t = meas.t
 
     def set_x(self, x):
@@ -101,26 +123,30 @@ class Trackmanagement:
         
     def manage_tracks(self, unassigned_tracks, unassigned_meas, meas_list):  
         ############
-        # Implement track management:
-        # - Decrease the track score for unassigned tracks
-        # - Delete tracks if the score is too low or P is too big
+        # TODO Step 2: implement track management:
+        # - decrease the track score for unassigned tracks
+        # - delete tracks if the score is too low or P is too big (check params.py for parameters that might be helpful, but
+        # feel free to define your own parameters)
         ############
         
-        # Decrease score for unassigned tracks
+        # decrease score for unassigned tracks
         for i in unassigned_tracks:
             track = self.track_list[i]
-            # Check if the measurement is in the field of view
-            if meas_list and meas_list[0].sensor.in_fov(track.x):
-                track.state = 'tentative'
-                if track.score > params.delete_threshold + 1:
-                    track.score = params.delete_threshold + 1
-                track.score -= 1. / params.window
+            # check visibility    
+            if meas_list: # if not empty
+                if meas_list[0].sensor.in_fov(track.x):
+                    # your code goes here
+                    track.last_detections.append(0)  # Append a 0 to the detection history, indicating no detection for this frame
+                    track.score = sum(track.last_detections) / len(track.last_detections)  # Update the score as the average of last detections 
 
-        # Delete old tracks   
-        for track in self.track_list:
-            if track.score <= params.delete_threshold:
-                if track.P[0, 0] >= params.max_P or track.P[1, 1] >= params.max_P:
-                    self.delete_track(track)
+        # delete old tracks   
+
+        # delete old tracks 
+        for track in self.track_list: # Loop through all tracks in the track list
+            #Check if the track is not initialized and has a low score
+            if track.state != 'Initialized' and track.score < params.delete_threshold  \
+                or track.P[0, 0] > params.max_P or track.P[1, 1] > params.max_P:
+                self.delete_track(track) # Delete the track if any condition is met
             
         ############
         # END student code
@@ -146,17 +172,17 @@ class Trackmanagement:
         
     def handle_updated_track(self, track):      
         ############
-        # Implement track management for updated tracks:
-        # - Increase track score
-        # - Set track state to 'tentative' or 'confirmed'
+        # TODO Step 2: implement track management for updated tracks:
+        # - increase track score
+        # - set track state to 'tentative' or 'confirmed'
         ############
 
-        track.score += 1. / params.window
-        if track.score > params.confirmed_threshold:
-            track.state = 'confirmed'
-        else:
-            track.state = 'tentative'
+        track.last_detections.append(1)  # Append 1 to detection history (indicating a successful detection)
+        track.score = sum(track.last_detections) / len(track.last_detections)  # Update the tracking score based on the last detections
+        # Set track state based on score: confirmed if score exceeds the threshold, tentative otherwise
+        track.state = 'confirmed' if track.score > params.confirmed_threshold else 'tentative'
+
         
         ############
         # END student code
-        ############  
+        ############ 
