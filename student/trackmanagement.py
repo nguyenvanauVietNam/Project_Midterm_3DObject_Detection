@@ -73,7 +73,7 @@ class Track:
         self.P[0:3, 0:3] = position_covariance  # Assign optimized position covariance
         self.P[3:6, 3:6] = velocity_covariance  # Assign optimized velocity covariance
 
-        self.state = 'Initialized'  # Mark the track state as initialized
+        self.state = 'initialized'  # Mark the track state as initialized
 
         self.last_detections = collections.deque(params.window * [0], params.window)  # Initialize deque to track detection history
         self.last_detections.append(1)  # Append 1 to indicate a successful detection in the current frame
@@ -144,7 +144,7 @@ class Trackmanagement:
         # delete old tracks 
         for track in self.track_list: # Loop through all tracks in the track list
             #Check if the track is not initialized and has a low score
-            if track.state != 'Initialized' and track.score < params.delete_threshold  \
+            if track.state != 'initialized' and track.score < params.delete_threshold  \
                 or track.P[0, 0] > params.max_P or track.P[1, 1] > params.max_P:
                 self.delete_track(track) # Delete the track if any condition is met
             
