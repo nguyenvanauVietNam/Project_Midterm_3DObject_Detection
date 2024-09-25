@@ -51,8 +51,6 @@ class Track:
         #                 [0.0e+00, 0.0e+00, 0.0e+00, 2.5e+03, 0.0e+00, 0.0e+00],
         #                 [0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 2.5e+03, 0.0e+00],
         #                 [0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 2.5e+01]])
-        self.state = 'confirmed'
-        self.score = 0
         position_sensor_frame = np.ones((4, 1))  # Create a column vector of ones for homogeneous coordinates
         position_sensor_frame[0:3] = meas.z[0:3]  # Assign the first three elements from the measurement's position
 
@@ -60,8 +58,8 @@ class Track:
 
         self.x = np.zeros((6, 1))  # Initialize state vector (position + velocity) with zeros
         self.x[0:3] = position_vehicle_frame[0:3]  # Assign transformed position (x, y, z) to the state vector
-
-        position_covariance = M_rot * meas.R * M_rot.T  # Rotate and optimize position covariance matrix
+        #position_covariance = M_rot * meas.R * M_rot.T  # Rotate and optimize position covariance matrix
+        position_covariance = M_rot * meas.R * np.transpose(M_rot) # Rotate and optimize position covariance matrix
 
         velocity_covariance = np.matrix([  # Optimize velocity covariance based on observed speed
             [params.sigma_p44**2, 0, 0], 
@@ -74,7 +72,7 @@ class Track:
         self.P[3:6, 3:6] = velocity_covariance  # Assign optimized velocity covariance
 
         self.state = 'initialized'  # Mark the track state as initialized
-
+        self.score = 1/params.window #update param
         self.last_detections = collections.deque(params.window * [0], params.window)  # Initialize deque to track detection history
         self.last_detections.append(1)  # Append 1 to indicate a successful detection in the current frame
 
@@ -109,7 +107,7 @@ class Track:
             self.length = c * meas.length + (1 - c) * self.length
             self.height = c * meas.height + (1 - c) * self.height
             M_rot = meas.sensor.sens_to_veh
-            self.yaw = np.arccos(M_rot[0,0]*np.cos(meas.yaw) + M_rot[0,1]*np.sin(meas.yaw)) # transform yaw from sensor to vehicle coordinates
+            self.yaw = np.arccos(M_rot[0,0]*np.cos(meas.yaw) + M_rot[0,1]*np.sin(meas.yaw)) # transform rotation from sensor to vehicle coordinates
         
 ###################        
 
@@ -135,18 +133,23 @@ class Trackmanagement:
             # check visibility    
             if meas_list: # if not empty
                 if meas_list[0].sensor.in_fov(track.x):
+                    track.state =  'tentative' #update code base on memtor support
+                    if track.score > params.delete_threshold + 1:  # Kiểm tra xem điểm số có lớn hơn ngưỡng xóa không
+                            track.score = params.delete_threshold + 1  # Giới hạn điểm số không vượt quá ngưỡng xóa + 1
                     # your code goes here
-                    track.last_detections.append(0)  # Append a 0 to the detection history, indicating no detection for this frame
-                    track.score = sum(track.last_detections) / len(track.last_detections)  # Update the score as the average of last detections 
-
-        # delete old tracks   
-
+                    #track.last_detections.append(0)  # Append a 0 to the detection history, indicating no detection for this frame
+                    #track.score = sum(track.last_detections) / len(track.last_detections)  # Update the score as the average of last detections 
+                    track.score -= 1. / params.window  # Giảm điểm số theo tỷ lệ 1/ kích thước cửa sổ, thể hiện sự suy giảm theo thời gian
         # delete old tracks 
         for track in self.track_list: # Loop through all tracks in the track list
+            # #Check if the track is not initialized and has a low score
+            # if track.state != 'initialized' and track.score < params.delete_threshold  \
+            #     or track.P[0, 0] > params.max_P or track.P[1, 1] > params.max_P:
+            #     self.delete_track(track) # Delete the track if any condition is met
             #Check if the track is not initialized and has a low score
-            if track.state != 'initialized' and track.score < params.delete_threshold  \
-                or track.P[0, 0] > params.max_P or track.P[1, 1] > params.max_P:
-                self.delete_track(track) # Delete the track if any condition is met
+            if track.score <= params.delete_threshold:
+                if track.P[0, 0] >=  params.max_P or track.P[1, 1] >= params.max_P:
+                    self.delete_track(track) # Delete the track if any condition is met
             
         ############
         # END student code
@@ -177,8 +180,10 @@ class Trackmanagement:
         # - set track state to 'tentative' or 'confirmed'
         ############
 
-        track.last_detections.append(1)  # Append 1 to detection history (indicating a successful detection)
-        track.score = sum(track.last_detections) / len(track.last_detections)  # Update the tracking score based on the last detections
+        #track.last_detections.append(1)  # Append 1 to detection history (indicating a successful detection)
+        
+        #track.score = sum(track.last_detections) / len(track.last_detections)  # Update the tracking score based on the last detections
+        track.score += 1./params.window  # Update the tracking score based on params.window
         # Set track state based on score: confirmed if score exceeds the threshold, tentative otherwise
         track.state = 'confirmed' if track.score > params.confirmed_threshold else 'tentative'
 

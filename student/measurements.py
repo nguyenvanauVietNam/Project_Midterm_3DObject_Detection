@@ -63,11 +63,11 @@ class Sensor:
         if sens_pos[0] > 0:  # Check if the object is in front of the sensor (positive x-axis)
             # Calculate the angle between the object and the x-axis in sensor space
             angle_to_x_axis = np.arctan(sens_pos[1] / sens_pos[0])  
-        # Check if the calculated angle is within the field of view of the sensor
-        if angle_to_x_axis > self.fov[0] and angle_to_x_axis < self.fov[1]:
-            return True  # Object is within the FOV
-        else:
-            return False  # Object is outside the FOV
+            # Check if the calculated angle is within the field of view of the sensor
+            if angle_to_x_axis > self.fov[0] and angle_to_x_axis < self.fov[1]:
+                return True  # Object is within the FOV
+            else:
+                return False  # Object is outside the FOV
         ############
         # END student code
         ############ 
@@ -110,20 +110,14 @@ class Sensor:
                 # Check if the object is directly in line with the sensor's x-axis (important for camera calculations)
                 if sens_coords[0] == 0:
                     raise ValueError('Invalid value: cam_sens[0] cannot be zero for division')
-
-                # Calculate the projected i (horizontal) coordinate in the image plane
-                pixel_coords[0, 0] = self.c_i - self.f_i * sens_coords[1] / sens_coords[0]
-
-                # Calculate the projected j (vertical) coordinate in the image plane
-                pixel_coords[1, 0] = self.c_j - self.f_j * sens_coords[2] / sens_coords[0]
+                else: #fix base on mentor
+                    # Calculate the projected i (horizontal) coordinate in the image plane
+                    pixel_coords[0, 0] = self.c_i - self.f_i * sens_coords[1] / sens_coords[0]
+                    # Calculate the projected j (vertical) coordinate in the image plane
+                    pixel_coords[1, 0] = self.c_j - self.f_j * sens_coords[2] / sens_coords[0]
 
                 # Return the pixel coordinates in the image plane for camera
                 return pixel_coords
-
-            except ValueError as e:
-                # Handle specific errors such as invalid input or undefined calculations
-                print(f"ValueError: {e}")
-                return None
 
             except Exception as e:
                 # Handle any other unexpected exceptions
@@ -234,7 +228,7 @@ class Measurement:
             self.z[0] = z[0] 
             self.z[1] = z[1]  
             #self.z[2] = z[2]
-            
+            self.sensor = sensor #Fix bug no Create Sensor
             # Measurement noise covariance matrix
             self.R = np.matrix([[camera_noise_std_i**2, 0],   # Noise in the i direction
                                 [0, camera_noise_std_j**2]])  # Noise in the j direction

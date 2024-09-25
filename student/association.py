@@ -57,23 +57,35 @@ class Association:
         num_meas = len(meas_list)  # Number of measurements
         
         # Initialize unassigned tracks and measurements
+        #self.association_matrix = np.ones((num_tracks, num_meas)) * np.inf # reset association_matrix
+        self.association_matrix = np.asmatrix(np.inf * np.ones((num_tracks,num_meas)))# reset association_matrix
+        #FIX bug by mentor Udacity
+        #self.association_matrix  = list(range(num_meas))  # Measurement indices
+        self.unassigned_meas = list(range(num_meas))        # Measurement indices
         self.unassigned_tracks = list(range(num_tracks))  # Track indices
-        self.unassigned_meas = list(range(num_meas))  # Measurement indices
-
+        
         # Create an association matrix filled with infinity
-        self.association_matrix = np.asmatrix(np.inf * np.ones((num_tracks, num_meas)))  # Association matrix
+        #self.association_matrix = np.asmatrix(np.inf * np.ones((num_tracks, num_meas)))  # Association matrix
 
         # Iterate through tracks and measurements to calculate distances
-        for track_index in range(num_tracks):
-            track = track_list[track_index]  # Current track
-            for meas_index in range(num_meas):
-                meas = meas_list[meas_index]  # Current measurement
-                
+        # for track_index in range(num_tracks):
+        #     track = track_list[track_index]  # Current track
+        #     for meas_index in range(num_meas):
+        #         meas = meas_list[meas_index]  # Current measurement
+        #Fix by mentor Udacity
+        for track_index in range(num_tracks): #fix bug TypeError: list indices must be integers or slices, not tuple
+            track = track_list[track_index] #Fix bug bug QnA: https://knowledge.udacity.com/questions/1051580
+            for meas_index in range(num_meas):        
                 try:
+                    # dist = self.MHD(track, meas, KF)  # Calculate Mahalanobis distance
+                    # # Check if the distance is within the gating criteria
+                    # if self.gating(dist, meas.sensor):
+                    #     self.association_matrix[track_index, meas_index] = dist  # Update association matrix with distance
+                    #Fix bug QnA: https://knowledge.udacity.com/questions/1051580
+                    meas = meas_list[meas_index] #Fix bug bug QnA: https://knowledge.udacity.com/questions/1051580
                     dist = self.MHD(track, meas, KF)  # Calculate Mahalanobis distance
-                    # Check if the distance is within the gating criteria
                     if self.gating(dist, meas.sensor):
-                        self.association_matrix[track_index, meas_index] = dist  # Update association matrix with distance
+                        self.association_matrix[track_index, meas_index] = dist
                 except Exception as e:
                     print(f"Error calculating distance for track {track_index} and measurement {meas_index}: {e}")
         ############
@@ -90,7 +102,7 @@ class Association:
         ############
         # the following only works for at most one track and one measurement
         update_track = 0
-        update_track = 0
+        update_meas  = 0
 
         # Check for minimum entry in the association matrix
         association_matrix = self.association_matrix
@@ -99,22 +111,22 @@ class Association:
 
         # Get indices of the minimum entry in the association matrix
         min_indices = np.unravel_index(np.argmin(association_matrix, axis=None), association_matrix.shape) 
-        update_track = min_indices[0]
-        update_track = min_indices[1]
+        indices_track = min_indices[0]
+        indices_meas = min_indices[1]
 
         # Delete the corresponding row and column for the next update
-        association_matrix = np.delete(association_matrix, update_track, 0) 
-        association_matrix = np.delete(association_matrix, update_track, 1)
+        association_matrix = np.delete(association_matrix, indices_track, 0) 
+        association_matrix = np.delete(association_matrix, indices_meas, 1)
         self.association_matrix = association_matrix
 
         # Update the closest track and measurement using the indices
-        update_track = self.unassigned_tracks[update_track] 
-        update_meas = self.unassigned_meas[update_track]
+        update_track = self.unassigned_tracks[indices_track] 
+        update_meas = self.unassigned_meas[indices_meas]
 
         # remove from list
         self.unassigned_tracks.remove(update_track) 
         self.unassigned_meas.remove(update_meas)
-        self.association_matrix = np.matrix([])
+        #self.association_matrix = np.matrix([])
 
         ############
         # END student code
@@ -132,7 +144,7 @@ class Association:
             # gating_threshold_value: the threshold value based on the chi-squared distribution that determines if the measurement is inside the gate
             gating_threshold_value = chi2.ppf(params.gating_threshold, df=sensor.dim_meas)
             
-            # return True if Mahalanobis distance (MHD) is less than the gating threshold, meaning the measurement is within the valid range
+            # return True if MHD < gating_threshold_value else return FALSE
             return MHD < gating_threshold_value
         ############
         # END student code
@@ -176,19 +188,14 @@ class Association:
             ############
             # TODO Step 3: calculate and return Mahalanobis distance
             ############
+            
+            #S = KF.S(track, meas, meas.sensor.get_H(track.x))  # Calculate the innovation covariance matrix S
+            S = np.linalg.inv(KF.S(track, meas, meas.sensor.get_H(track.x)))  # Tính ma trận S, sau đó lấy nghịch đảo của nó
+            mhd_gamma = KF.gamma(track, meas)  # Get gamma for KF
 
-            # measurement_mapping_matrix: the matrix that maps the object's state into the measurement space
-            measurement_mapping_matrix = meas.sensor.get_H(track.x)
-        
-            # inverse_covariance_matrix: the inverse of the covariance matrix S (which represents the uncertainty between prediction and measurement)
-            inverse_covariance_matrix = np.linalg.inv(KF.S(track, meas, measurement_mapping_matrix))
-
-            # residual_vector: the difference between the actual measurement and the predicted measurement from the track
-            residual_vector = KF.gamma(track, meas)
-
-            # returns the Mahalanobis distance, which measures the distance between the track and the measurement
-            return residual_vector.T @ inverse_covariance_matrix @ residual_vector
-
+            mhd_result = mhd_gamma.T * S * mhd_gamma  # Compute the Mahalanobis distance result using the transpose of gamma and the inverse of S
+            
+            return mhd_result  # Return the final Mahalanobis distance result
             ############
             # END student code
             ############ 

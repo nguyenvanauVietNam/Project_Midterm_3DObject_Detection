@@ -60,13 +60,13 @@ class Filter:
         q1 = ((delta_time**3)/3) * process_noise 
         q2 = ((delta_time**2)/2) * process_noise 
         q3 = delta_time * process_noise 
-        return np.matrix([[q1, 0, 0, q2, 0, 0],
+        Q = np.matrix([[q1, 0, 0, q2, 0, 0],
                           [0, q1, 0, 0, q2, 0],
                           [0, 0, q1, 0, 0, q2],
                           [q2, 0, 0, q3, 0, 0],
                           [0, q2, 0, 0, q3, 0],
                           [0, 0, q2, 0, 0, q3]])
-        
+        return Q
         ############
         # END student code
         ############ 
@@ -78,17 +78,19 @@ class Filter:
         # It performs the prediction step using the system matrix F and process noise covariance Q.
         ############
         # Fixbug base comment memtor
-        system_matrix = self.F() * track.x # System matrix F
-        # state_estimate = track.x  # Current state estimate
-        #error_covariance = track.P  # Current estimation error covariance
+        F = self.F() # System matrix F
+        
+        state_prediction = track.x  # Current state estimate
+        P = track.P  # Current estimation error covariance
         
         # Predict the state and covariance
-        #state_prediction = system_matrix @ state_estimate
-        covariance_prediction = self.F() * track.P * self.F().transpose() + self.Q()
+        state_prediction = F *state_prediction #state change
+        #covariance_prediction = self.F() * track.P * self.F().transpose() + self.Q()
+        P = F*track.P*F.transpose() + self.Q() # covariance prediction
         
-        # Update track with predictions
-        track.set_x(system_matrix)
-        track.set_P(covariance_prediction)
+        # Update track with predictions Fix base on mentor
+        track.set_x(state_prediction)
+        track.set_P(P)
         
         ############
         # END student code
@@ -101,18 +103,20 @@ class Filter:
         # It performs the update step using the measurement matrix H, residual gamma, and covariance of residual S.
         ############
         HH  = meas.sensor.get_H(track.x)  # Measurement matrix H
+        update_gamma = self.gamma(track, meas) # get gamma
         SS = self.S(track, meas, HH)  # Covariance of residual S
         KK = track.P * HH.transpose() * SS.I
-        updated_state = track.x + K * self.gamma(track, meas)
+        #updated_state = track.x + K * self.gamma(track, meas) Fix base on menter
+        updated_state = track.x + KK * update_gamma
+        
         updated_covariance = (np.identity(params.dim_state) - KK * HH) * track.P
-
-
-        #Fix bug base on mentor
-        track.update_attributes(meas)
         
         # Save updated state and covariance in track
         track.set_x(updated_state)
         track.set_P(updated_covariance)
+       
+        #Fix bug base on mentor
+        track.update_attributes(meas)
 
 
 
@@ -133,13 +137,13 @@ class Filter:
         # END student code
         ############ 
 
-    def S(self, track, meas, measurement_matrix):
+    def S(self, track, meas, H):
         ############
         # TODO Step 1: Calculate and return covariance of residual S
         # The covariance of the residual S is used to measure the uncertainty of the prediction.
         # It accounts for the noise in the measurement and the prediction.
         ############
-        residual_covariance = measurement_matrix * track.P * measurement_matrix.transpose() + meas.R # Covariance of residual
+        residual_covariance = H * track.P * H.transpose() + meas.R # Covariance of residual
         
         return residual_covariance
         
