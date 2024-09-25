@@ -105,7 +105,7 @@ class Filter:
         HH  = meas.sensor.get_H(track.x)  # Measurement matrix H
         update_gamma = self.gamma(track, meas) # get gamma
         SS = self.S(track, meas, HH)  # Covariance of residual S
-        KK = track.P * HH.transpose() * SS.I
+        KK = track.P * HH.transpose() * np.linalg.inv(SS)   # Kalman gain
         #updated_state = track.x + K * self.gamma(track, meas) Fix base on menter
         updated_state = track.x + KK * update_gamma
         
