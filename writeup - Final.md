@@ -11,6 +11,7 @@ This project focuses on tracking 3D objects over time using the Waymo Open Datas
 ![Image 2](img\Step1\tracking151.png)
 ![Image 3](img\Step1\tracking152.png)
 ![Image 4](img\Step1\tracking153.png)
+![Image 5 run RMS](img\Step1\Final_run.PNG)
 
 ## Project Instructions Step 2
 ![Image 1](img\Step2\tracking065.png)
@@ -24,9 +25,7 @@ This project focuses on tracking 3D objects over time using the Waymo Open Datas
 
 ## Project Instructions Step 4
 ![Video out put](img\Step4\my_tracking_results.avi)
-![Video out put](img\Step4\my_tracking_results.mp4)
-![Video out Gif](img\Step4\my_tracking_results-ezgif.com-video-to-gif-converter.gif)
-
+![Video out put](img\Step4\Final.PNG)
 
 ### Recap of the Four Tracking Steps
 

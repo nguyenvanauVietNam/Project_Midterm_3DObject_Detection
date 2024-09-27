@@ -130,7 +130,7 @@ class Sensor:
             ############
             
 
-        def get_H(self, x):
+    def get_H(self, x):
             # calculate Jacobian H at current x from h(x)
             H = np.matrix(np.zeros((self.dim_meas, params.dim_state)))
             R = self.veh_to_sens[0:3, 0:3] # rotation
